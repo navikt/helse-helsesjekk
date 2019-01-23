@@ -1,0 +1,57 @@
+sudo: required
+language: java
+jdk:
+- openjdk11
+services:
+- docker
+before_install:
+- openssl aes-256-cbc -K $encrypted_588621965f50_key -iv $encrypted_588621965f50_iv
+  -in travis/helseci.key.enc -out travis/helseci.key -d
+- git clone https://github.com/navikt/github-apps-support.git
+- export PATH=`pwd`/github-apps-support/bin:$PATH
+- export GH_TOKEN=$(generate-installation-token.sh `generate-jwt.sh ./travis/helseci.key
+  $GITHUB_APP_ID`)
+- export COMMIT_SHORT=$(git rev-parse --short HEAD)
+- export ORIGINAL_COMMITTER=$(git log -1 --pretty=format:'%an <%ae>')
+script:
+- "./gradlew build && docker build --pull -t $DOCKER_IMG_NAME:$COMMIT_SHORT ."
+- |
+  set -e
+  if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ "${TRAVIS_BRANCH}" = "master" ]; then
+    echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+    docker push $DOCKER_IMG_NAME:$COMMIT_SHORT
+
+    git clone https://x-access-token:$GH_TOKEN@github.com/navikt/helse-iac.git
+
+    cd helse-iac
+    ./set-image.sh preprod/$APP_NAME/naiserator.yaml $DOCKER_IMG_NAME:$COMMIT_SHORT
+    ./set-image.sh prod/$APP_NAME/naiserator.yaml $DOCKER_IMG_NAME:$COMMIT_SHORT
+
+    git config user.name team-helse[bot]
+    git config user.email team-helse[bot]@users.noreply.github.com
+
+    git add preprod/$APP_NAME/naiserator.yaml
+    git add prod/$APP_NAME/naiserator.yaml
+    git commit -m "Bump $APP_NAME" -m "Caused by $TRAVIS_BUILD_WEB_URL" --author "$ORIGINAL_COMMITTER"
+
+    git push https://x-access-token:$GH_TOKEN@github.com/navikt/helse-iac.git master
+
+    cd ..
+    fi
+before_cache:
+- rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+- rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+cache:
+  directories:
+  - "$HOME/.gradle/caches/"
+  - "$HOME/.gradle/wrapper/"
+env:
+  global:
+  - APP_NAME=sjekk
+  - DOCKER_IMG_NAME=navikt/helse-sjekk
+  - GITHUB_APP_ID=19726
+  - secure: oZqMIAmcUaXYkQzNC9bWsq2KcuG5QzlzeJziZcqw45pJrkjij6Z/8WSJZi0pQV/C5Rvdkr7WYA8J6xBZVTlmGt9drR9EkLNLGIwK4mrzGgbzPeGRHB/e1qWUF/7WmKjXfFSy3KKusfuRhPjvyoN5yAI7ibaheLC/6wdVSGcQoW9WFitFhGndbckGVbq1IfCx1rtsd3+Xcym9wTHxgU8T0jf0v9eFT8Mjhx231bd27Ilj3/wMyJUQxe1EcBrWVymfonckbMfyq5FS7CLzwwInR5g8uGmsRb6Rx5v5vNcCpvucCi3xP23pjo+J6zurusny7TuJRts6gCZX0KXF85kJP4CKDa4dOe5WHQCc0xTFqUJk2ell6yIe5hHKoA6/GMlsx/P5ErQWSKxdMF5vp0mzQIEfGw+ZDeFhWGN1slpS+GgGPeA//+WJ7bBw5eqpFxp/XZYFp+0b5z2W7vNp3dl2eRGFkMScg2IPwy4qBwU/HX1CLxXlyXoH/QAdhSWJGPABzfNDu6v98PN8jL2YYeyd7mDw7Czg+0omv147v20wQfEuoCNoBNB5SibY+JOkOONqVyRfiqzNpUIC6d0lMZRPU79ZQclk3pUOyZHPxPGFg7L6ZpW+MRxfHvFtnhaKq2v0+nbZUTqxl6c5UUoBvFfkM3/sDoPZahVldDuAkM4weBw=
+  - secure: ci+VD2/Sxx5CigLmyiJ4es/Nj/Yd4trQtdlJWzpu90MAHblmCjqLsXGnlYzVMa+NHTu71THfgQgoFJS0hIaQPZX7IAqvvy1iNNGSYTGFQuaBZSbGhC3fgO4L6GkT0sDWgvNnTOZUGFmw5moQksQ5VqKeLDJWZtjoInVkSpBP/wdGAgGx8cYURX4jDmCj2adOQsYLkJxvsDGjZ6FiFKmLor7n8ESfkeLAezQOFNNAbT5ivU7qef70no8JilckBOCcK81v5PD5yG/JNtPXayma2njVR9q6lm1IlfEU+V6tLGSXPgNrYSOx4/d6lcEGtR7SMxQJI++mNat+OYeHMi71in1u7eOk3VRRuIiTWkaeehF744q9AZmaTAHRZgmPoefFbDcfcq6D+SiBxmfschE4GK2lp7G4OJk8IZmu3ksna4WtiKDKhOXnIFtBClfELgxb5ix0gRpXRa0N1XOQgnQbA4llyubXYbRX2tinenKrkNDPyCYf+Qiq9+KfnT+vQiz0WbUHRjwg0ToqCfM9fZX5QV8SmIrsMzmfEQvrkpLRsWx/OF0d/juO2K/YtEvsemfRLaxDirh3nk+QRnNtmh9HX+DJxAjtMCHq8FZfwtDxbCFuNnhjmPxuA6v0MSYKyFZNZr8brA0baV22fG4CDPGtB973L0jwliOUar0H+5JAr20=
+notifications:
+  slack:
+    secure: MS7S/IezxY5feUzLa9owxEEgQIjK95vabRDvRORyL53cR4G/C8X8rHbCzZWdWHcQh/gRnigX1v1yH40DchdToe59TAMGyhRWvGJ/2vl9D3ygMCeKSaeUXnpDjDvlMnscbJuWrtxTdFRMFyBZfr10pT0i1oszkW9XREbys6uLXfoKMBYrrEMrrRbowU2y7tTpcxzg07XVxtc11Gl95xrSBfwBw033xdiOKiCoqL3V5zBiWhGq23GMYB5SC89iU8e5uIz+NvgImKJRbNJMR3n+LBNAWZvavybUT5ugpkzpWaS8Ol7xd0dRkMcGCLx81o2DS3dnV9j3t2sxmpjAtrx3TcnqYWQHCRFlQO3TnwRRTYkiGl3cY2zte9aFl2haYLMVzXY9QGzAT5WnKUE3STgLpD5DFjI6BtyjcmyHjYs7vbVD6/3AeVdE1JWapRxXkv8DHaoPV4QmK6z3jfjh44tESlrudVJR5/C3m1BGnNzjffCc/IOlzttrPBalPqUwvtosjlEGEtIEiMc+P/m3KYNhClTOLx8RP0qypOJ6/SQ+Sj1XSS0CbTKfvDxqgRIEQBIWKhYwRd/JgWPTtV+1ta9OMb/4TUdvsVFzeOsxYwCbqFV7+y126+mP0DYX8bgz5hh3p5KHcBdT6BSIYUykthyeAmRtkpBubuHuLCz4tkyp74E=
