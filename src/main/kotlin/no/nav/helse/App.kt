@@ -12,6 +12,16 @@ import no.nav.helse.nais.nais
 import no.nav.helse.ws.Clients
 import no.nav.helse.ws.sts.configureFor
 import no.nav.helse.ws.sts.stsClient
+import no.nav.tjeneste.virksomhet.arbeidsfordeling.v1.binding.ArbeidsfordelingV1
+import no.nav.tjeneste.virksomhet.arbeidsforhold.v3.binding.ArbeidsforholdV3
+import no.nav.tjeneste.virksomhet.infotrygdberegningsgrunnlag.v1.binding.InfotrygdBeregningsgrunnlagV1
+import no.nav.tjeneste.virksomhet.infotrygdsak.v1.binding.InfotrygdSakV1
+import no.nav.tjeneste.virksomhet.inntekt.v3.binding.InntektV3
+import no.nav.tjeneste.virksomhet.medlemskap.v2.MedlemskapV2
+import no.nav.tjeneste.virksomhet.meldekortutbetalingsgrunnlag.v1.binding.MeldekortUtbetalingsgrunnlagV1
+import no.nav.tjeneste.virksomhet.organisasjon.v5.binding.OrganisasjonV5
+import no.nav.tjeneste.virksomhet.person.v3.binding.PersonV3
+import no.nav.tjeneste.virksomhet.sykepenger.v2.binding.SykepengerV2
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.timer
@@ -39,118 +49,44 @@ fun Application.webserviceSjekker(env: Environment) {
     val stsClient = stsClient(env.securityTokenServiceEndpointUrl,
             env.securityTokenUsername to env.securityTokenPassword)
 
-    val arbeidsfordelingPingTimer = Histogram.build()
-            .name("arbeidsfordeling_v1_ping_seconds")
-            .help("latency for ArbeidsfordelingV1.ping()").register()
-    val arbeidsfordelingPingErrorCounter = Counter.build()
-            .name("arbeidsfordeling_v1_ping_error_counter")
-            .help("error counter for ArbeidsfordelingV1.ping()").register()
-
-    val arbeidsforholdPingTimer = Histogram.build()
-            .name("arbeidsforhold_v3_ping_seconds")
-            .help("latency for ArbeidsforholdV3.ping()").register()
-    val arbeidsforholdPingErrorCounter = Counter.build()
-            .name("arbeidsforhold_v3_ping_error_counter")
-            .help("error counter for ArbeidsforholdV3.ping()").register()
-
-    val infotrygdBeregningsgrunnlagPingTimer = Histogram.build()
-            .name("infotrygd_beregningsgrunnlag_v1_ping_seconds")
-            .help("latency for InfotrygdBeregningsgrunnlagV1.ping()").register()
-    val infotrygdBeregningsgrunnlagPingErrorCounter = Counter.build()
-            .name("infotrygd_beregningsgrunnlag_v1_ping_error_counter")
-            .help("error counter for InfotrygdBeregningsgrunnlagV1.ping()").register()
-
-    val infotrygdSakPingTimer = Histogram.build()
-            .name("infotrygd_sak_v1_ping_seconds")
-            .help("latency for InfotrygdSakV1.ping()").register()
-    val infotrygdSakPingErrorCounter = Counter.build()
-            .name("infotrygd_sak_v1_ping_error_counter")
-            .help("error counter for InfotrygdSakV1.ping()").register()
-
-    val inntektPingTimer = Histogram.build()
-            .name("inntekt_v3_ping_seconds")
-            .help("latency for InntektV3.ping()").register()
-    val inntektPingErrorCounter = Counter.build()
-            .name("inntekt_v3_ping_error_counter")
-            .help("error counter for InntektV3.ping()").register()
-
-    val medlemskapPingTimer = Histogram.build()
-            .name("medlemskap_v2_ping_seconds")
-            .help("latency for MedlemskapV2.ping()").register()
-    val medlemskapPingErrorCounter = Counter.build()
-            .name("medlemskap_v2_ping_error_counter")
-            .help("error counter for MedlemskapV2.ping()").register()
-
-    val meldekortUtbetalingsgrunnlagPingTimer = Histogram.build()
-            .name("meldekort_utbetalingsgrunnlag_v1_ping_seconds")
-            .help("latency for MeldekortUtbetalingsgrunnlagV1.ping()").register()
-    val meldekortUtbetalingsgrunnlagPingErrorCounter = Counter.build()
-            .name("meldekort_utbetalingsgrunnlag_v1_ping_error_counter")
-            .help("error counter for MeldekortUtbetalingsgrunnlagV1.ping()").register()
-
-    val organisasjonPingTimer = Histogram.build()
-            .name("organisasjon_v5_ping_seconds")
-            .help("latency for OrganisasjonV5.ping()").register()
-    val organisasjonPingErrorCounter = Counter.build()
-            .name("organisasjon_v5_ping_error_counter")
-            .help("error counter for OrganisasjonV5.ping()").register()
-
-    val personPingTimer = Histogram.build()
-            .name("person_v3_ping_seconds")
-            .help("latency for PersonV3.ping()").register()
-    val personPingErrorCounter = Counter.build()
-            .name("person_v3_ping_error_counter")
-            .help("error counter for PersonV3.ping()").register()
-
-    val sykepengerPingTimer = Histogram.build()
-            .name("sykepenger_v2_ping_seconds")
-            .help("latency for SykepengerV2.ping()").register()
-    val sykepengerPingErrorCounter = Counter.build()
-            .name("sykepenger_v2_ping_error_counter")
-            .help("error counter for SykepengerV2.ping()").register()
-
-    val arbeidsfordelingV1 = Clients.ArbeidsfordelingV1(env.arbeidsfordelingEndpointUrl)
-            .apply(stsClient::configureFor)
-    val arbeidsforholdV3 = Clients.ArbeidsforholdV3(env.arbeidsforholdEndpointUrl)
-            .apply(stsClient::configureFor)
-    val infotrygdBeregningsgrunnlagV1 = Clients.InfotrygdBeregningsgrunnlagConsumerConfig(env.infotrygdBeregningsgrunnlagEndpointUrl)
-            .apply(stsClient::configureFor)
-    val infotrygdSakV1 = Clients.InfotrygdSakV1(env.infotrygdSakEndpointUrl)
-            .apply(stsClient::configureFor)
-    val inntektV3 = Clients.InntektV3(env.inntektEndpointUrl)
-            .apply(stsClient::configureFor)
-    val medlemskapV2 = Clients.MedlemskapV2(env.medlemskapEndpointUrl)
-            .apply(stsClient::configureFor)
-    val meldekortUtbetalingsgrunnlagV1 = Clients.MeldekortUtbetalingsgrunnlagV1(env.meldekortUtbetalingsgrunnlagEndpointUrl)
-            .apply(stsClient::configureFor)
-    val organisasjonV5 = Clients.OrganisasjonV5(env.organisasjonEndpointUrl)
-            .apply(stsClient::configureFor)
-    val personV3 = Clients.PersonV3(env.personEndpointUrl)
-            .apply(stsClient::configureFor)
-    val sykepengerV2 = Clients.SykepengerV2(env.sykepengerEndpointUrl)
-            .apply(stsClient::configureFor)
-
-    checkWebservice(arbeidsfordelingPingTimer, arbeidsfordelingPingErrorCounter, arbeidsfordelingV1::ping)
-    checkWebservice(arbeidsforholdPingTimer, arbeidsfordelingPingErrorCounter, arbeidsforholdV3::ping)
-    checkWebservice(infotrygdBeregningsgrunnlagPingTimer, infotrygdBeregningsgrunnlagPingErrorCounter, infotrygdBeregningsgrunnlagV1::ping)
-    checkWebservice(infotrygdSakPingTimer, infotrygdSakPingErrorCounter, infotrygdSakV1::ping)
-    checkWebservice(inntektPingTimer, inntektPingErrorCounter, inntektV3::ping)
-    checkWebservice(medlemskapPingTimer, medlemskapPingErrorCounter, medlemskapV2::ping)
-    checkWebservice(meldekortUtbetalingsgrunnlagPingTimer, meldekortUtbetalingsgrunnlagPingErrorCounter, meldekortUtbetalingsgrunnlagV1::ping)
-    checkWebservice(organisasjonPingTimer, organisasjonPingErrorCounter, organisasjonV5::ping)
-    checkWebservice(personPingTimer, personPingErrorCounter, personV3::ping)
-    checkWebservice(sykepengerPingTimer, sykepengerPingErrorCounter, sykepengerV2::ping)
+    val webservices = listOf(
+            Webservice("arbeidsfordeling_v1", "ArbeidsfordelingV1", Clients.ArbeidsfordelingV1(env.arbeidsfordelingEndpointUrl), ArbeidsfordelingV1::ping),
+            Webservice("arbeidsforhold_v3", "ArbeidsforholdV3", Clients.ArbeidsforholdV3(env.arbeidsforholdEndpointUrl), ArbeidsforholdV3::ping),
+            Webservice("infotrygd_beregningsgrunnlag_v1", "InfotrygdBeregningsgrunnlagV1", Clients.InfotrygdBeregningsgrunnlagConsumerConfig(env.infotrygdBeregningsgrunnlagEndpointUrl), InfotrygdBeregningsgrunnlagV1::ping),
+            Webservice("infotrygd_sak_v1", "InfotrygdSakV1", Clients.InfotrygdSakV1(env.infotrygdSakEndpointUrl), InfotrygdSakV1::ping),
+            Webservice("inntekt_v3", "InntektV3", Clients.InntektV3(env.inntektEndpointUrl), InntektV3::ping),
+            Webservice("medlemskap_v2", "MedlemskapV2", Clients.MedlemskapV2(env.medlemskapEndpointUrl), MedlemskapV2::ping),
+            Webservice("meldekort_utbetalingsgrunnlag_v1", "MeldekortUtbetalingsgrunnlagV1", Clients.MeldekortUtbetalingsgrunnlagV1(env.meldekortUtbetalingsgrunnlagEndpointUrl), MeldekortUtbetalingsgrunnlagV1::ping),
+            Webservice("organisasjon_v5", "OrganisasjonV5", Clients.OrganisasjonV5(env.organisasjonEndpointUrl), OrganisasjonV5::ping),
+            Webservice("person_v3", "PersonV3", Clients.PersonV3(env.personEndpointUrl), PersonV3::ping),
+            Webservice("sykepenger_v2", "SykepengerV2", Clients.SykepengerV2(env.sykepengerEndpointUrl), SykepengerV2::ping)
+    ).onEach {
+        stsClient.configureFor(it.port)
+    }.forEach {
+        timer(daemon = true, period = 10000) {
+            it.ping()
+        }
+    }
 
     routing {
         nais(collectorRegistry)
     }
 }
 
-fun checkWebservice(timer: Histogram, errorCounter: Counter, pingFunc: () -> Unit) {
-    timer(daemon = true, period = 10000) {
+data class Webservice<T>(val metricName: String, val serviceName: String, val port: T, private val pingFunc: T.() -> Unit) {
+
+    private val timer: Histogram = Histogram.build()
+            .name("${metricName}_ping_seconds")
+            .help("latency for ${serviceName}.ping()").register()
+
+    private val errorCounter: Counter = Counter.build()
+            .name("${metricName}_ping_error_counter")
+            .help("error counter for ${serviceName}.ping()").register()
+
+    fun ping() {
         timer.time {
             try {
-                pingFunc()
+                port.pingFunc()
             } catch (err: Exception) {
                 errorCounter.inc()
                 log.error("Failed to ping webservice", err)
