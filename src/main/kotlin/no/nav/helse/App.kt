@@ -5,6 +5,7 @@ import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.prometheus.client.CollectorRegistry
+import io.prometheus.client.Counter
 import io.prometheus.client.Histogram
 import io.prometheus.client.hotspot.DefaultExports
 import no.nav.helse.nais.nais
@@ -41,33 +42,72 @@ fun Application.webserviceSjekker(env: Environment) {
     val arbeidsfordelingPingTimer = Histogram.build()
             .name("arbeidsfordeling_v1_ping_seconds")
             .help("latency for ArbeidsfordelingV1.ping()").register()
+    val arbeidsfordelingPingErrorCounter = Counter.build()
+            .name("arbeidsfordeling_v1_ping_error_counter")
+            .help("error counter for ArbeidsfordelingV1.ping()").register()
+
     val arbeidsforholdPingTimer = Histogram.build()
             .name("arbeidsforhold_v3_ping_seconds")
             .help("latency for ArbeidsforholdV3.ping()").register()
+    val arbeidsforholdPingErrorCounter = Counter.build()
+            .name("arbeidsforhold_v3_ping_error_counter")
+            .help("error counter for ArbeidsforholdV3.ping()").register()
+
     val infotrygdBeregningsgrunnlagPingTimer = Histogram.build()
             .name("infotrygd_beregningsgrunnlag_v1_ping_seconds")
             .help("latency for InfotrygdBeregningsgrunnlagV1.ping()").register()
+    val infotrygdBeregningsgrunnlagPingErrorCounter = Counter.build()
+            .name("infotrygd_beregningsgrunnlag_v1_ping_error_counter")
+            .help("error counter for InfotrygdBeregningsgrunnlagV1.ping()").register()
+
     val infotrygdSakPingTimer = Histogram.build()
             .name("infotrygd_sak_v1_ping_seconds")
             .help("latency for InfotrygdSakV1.ping()").register()
+    val infotrygdSakPingErrorCounter = Counter.build()
+            .name("infotrygd_sak_v1_ping_error_counter")
+            .help("error counter for InfotrygdSakV1.ping()").register()
+
     val inntektPingTimer = Histogram.build()
             .name("inntekt_v3_ping_seconds")
             .help("latency for InntektV3.ping()").register()
+    val inntektPingErrorCounter = Counter.build()
+            .name("inntekt_v3_ping_error_counter")
+            .help("error counter for InntektV3.ping()").register()
+
     val medlemskapPingTimer = Histogram.build()
             .name("medlemskap_v2_ping_seconds")
             .help("latency for MedlemskapV2.ping()").register()
+    val medlemskapPingErrorCounter = Counter.build()
+            .name("medlemskap_v2_ping_error_counter")
+            .help("error counter for MedlemskapV2.ping()").register()
+
     val meldekortUtbetalingsgrunnlagPingTimer = Histogram.build()
             .name("meldekort_utbetalingsgrunnlag_v1_ping_seconds")
             .help("latency for MeldekortUtbetalingsgrunnlagV1.ping()").register()
+    val meldekortUtbetalingsgrunnlagPingErrorCounter = Counter.build()
+            .name("meldekort_utbetalingsgrunnlag_v1_ping_error_counter")
+            .help("error counter for MeldekortUtbetalingsgrunnlagV1.ping()").register()
+
     val organisasjonPingTimer = Histogram.build()
             .name("organisasjon_v5_ping_seconds")
             .help("latency for OrganisasjonV5.ping()").register()
+    val organisasjonPingErrorCounter = Counter.build()
+            .name("organisasjon_v5_ping_error_counter")
+            .help("error counter for OrganisasjonV5.ping()").register()
+
     val personPingTimer = Histogram.build()
             .name("person_v3_ping_seconds")
             .help("latency for PersonV3.ping()").register()
+    val personPingErrorCounter = Counter.build()
+            .name("person_v3_ping_error_counter")
+            .help("error counter for PersonV3.ping()").register()
+
     val sykepengerPingTimer = Histogram.build()
             .name("sykepenger_v2_ping_seconds")
             .help("latency for SykepengerV2.ping()").register()
+    val sykepengerPingErrorCounter = Counter.build()
+            .name("sykepenger_v2_ping_error_counter")
+            .help("error counter for SykepengerV2.ping()").register()
 
     val arbeidsfordelingV1 = Clients.ArbeidsfordelingV1(env.arbeidsfordelingEndpointUrl)
             .apply(stsClient::configureFor)
@@ -90,28 +130,29 @@ fun Application.webserviceSjekker(env: Environment) {
     val sykepengerV2 = Clients.SykepengerV2(env.sykepengerEndpointUrl)
             .apply(stsClient::configureFor)
 
-    checkWebservice(arbeidsfordelingPingTimer, arbeidsfordelingV1::ping)
-    checkWebservice(arbeidsforholdPingTimer, arbeidsforholdV3::ping)
-    checkWebservice(infotrygdBeregningsgrunnlagPingTimer, infotrygdBeregningsgrunnlagV1::ping)
-    checkWebservice(infotrygdSakPingTimer, infotrygdSakV1::ping)
-    checkWebservice(inntektPingTimer, inntektV3::ping)
-    checkWebservice(medlemskapPingTimer, medlemskapV2::ping)
-    checkWebservice(meldekortUtbetalingsgrunnlagPingTimer, meldekortUtbetalingsgrunnlagV1::ping)
-    checkWebservice(organisasjonPingTimer, organisasjonV5::ping)
-    checkWebservice(personPingTimer, personV3::ping)
-    checkWebservice(sykepengerPingTimer, sykepengerV2::ping)
+    checkWebservice(arbeidsfordelingPingTimer, arbeidsfordelingPingErrorCounter, arbeidsfordelingV1::ping)
+    checkWebservice(arbeidsforholdPingTimer, arbeidsfordelingPingErrorCounter, arbeidsforholdV3::ping)
+    checkWebservice(infotrygdBeregningsgrunnlagPingTimer, infotrygdBeregningsgrunnlagPingErrorCounter, infotrygdBeregningsgrunnlagV1::ping)
+    checkWebservice(infotrygdSakPingTimer, infotrygdSakPingErrorCounter, infotrygdSakV1::ping)
+    checkWebservice(inntektPingTimer, inntektPingErrorCounter, inntektV3::ping)
+    checkWebservice(medlemskapPingTimer, medlemskapPingErrorCounter, medlemskapV2::ping)
+    checkWebservice(meldekortUtbetalingsgrunnlagPingTimer, meldekortUtbetalingsgrunnlagPingErrorCounter, meldekortUtbetalingsgrunnlagV1::ping)
+    checkWebservice(organisasjonPingTimer, organisasjonPingErrorCounter, organisasjonV5::ping)
+    checkWebservice(personPingTimer, personPingErrorCounter, personV3::ping)
+    checkWebservice(sykepengerPingTimer, sykepengerPingErrorCounter, sykepengerV2::ping)
 
     routing {
         nais(collectorRegistry)
     }
 }
 
-fun checkWebservice(timer: Histogram, pingFunc: () -> Unit) {
+fun checkWebservice(timer: Histogram, errorCounter: Counter, pingFunc: () -> Unit) {
     timer(daemon = true, period = 10000) {
         timer.time {
             try {
                 pingFunc()
             } catch (err: Exception) {
+                errorCounter.inc()
                 log.error("Failed to ping webservice", err)
             }
         }
