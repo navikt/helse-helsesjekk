@@ -95,7 +95,7 @@ data class Webservice<T>(val serviceName: String, val port: T, private val pingF
                 port.pingFunc()
             } catch (err: Exception) {
                 wsErrorCounter.labels(serviceName).inc()
-                log.error("Failed to ping webservice", err)
+                log.error("Failed to ping ${serviceName}", err)
             }
         }
     }
