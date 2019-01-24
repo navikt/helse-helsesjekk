@@ -50,7 +50,7 @@ fun main() {
     ).onEach {
         stsClient.configureFor(it.port)
     }.map {
-        timer(daemon = true, period = 10000) {
+        timer(period = 10000) {
             it.ping()
         }
     }
