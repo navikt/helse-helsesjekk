@@ -1,6 +1,5 @@
 package no.nav.helse
 
-import io.ktor.application.Application
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -34,22 +33,10 @@ fun main() {
 
     DefaultExports.initialize()
 
-    val app = embeddedServer(Netty, 8080) {
-        webserviceSjekker(env)
-    }
-
-    app.start(wait = false)
-
-    Runtime.getRuntime().addShutdownHook(Thread {
-        app.stop(5, 60, TimeUnit.SECONDS)
-    })
-}
-
-fun Application.webserviceSjekker(env: Environment) {
     val stsClient = stsClient(env.securityTokenServiceEndpointUrl,
             env.securityTokenUsername to env.securityTokenPassword)
 
-    val webservices = listOf(
+    val timers = listOf(
             Webservice("ArbeidsfordelingV1", Clients.ArbeidsfordelingV1(env.arbeidsfordelingEndpointUrl), ArbeidsfordelingV1::ping),
             Webservice("ArbeidsforholdV3", Clients.ArbeidsforholdV3(env.arbeidsforholdEndpointUrl), ArbeidsforholdV3::ping),
             Webservice("InfotrygdBeregningsgrunnlagV1", Clients.InfotrygdBeregningsgrunnlagConsumerConfig(env.infotrygdBeregningsgrunnlagEndpointUrl), InfotrygdBeregningsgrunnlagV1::ping),
@@ -62,15 +49,26 @@ fun Application.webserviceSjekker(env: Environment) {
             Webservice("SykepengerV2", Clients.SykepengerV2(env.sykepengerEndpointUrl), SykepengerV2::ping)
     ).onEach {
         stsClient.configureFor(it.port)
-    }.forEach {
+    }.map {
         timer(daemon = true, period = 10000) {
             it.ping()
         }
     }
 
-    routing {
-        nais(collectorRegistry)
+    val app = embeddedServer(Netty, 8080) {
+        routing {
+            nais(collectorRegistry)
+        }
     }
+
+    app.start(wait = false)
+
+    Runtime.getRuntime().addShutdownHook(Thread {
+        timers.forEach {
+            it.cancel()
+        }
+        app.stop(5, 60, TimeUnit.SECONDS)
+    })
 }
 
 data class Webservice<T>(val serviceName: String, val port: T, private val pingFunc: T.() -> Unit) {
