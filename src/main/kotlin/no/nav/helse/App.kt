@@ -87,6 +87,10 @@ data class Webservice<T>(val serviceName: String, val port: T, private val pingF
                 .help("error counter for failed ping requests").register()
     }
 
+    init {
+        wsErrorCounter.labels(serviceName).inc(0.0)
+    }
+
     fun ping() {
         wsTimer.labels(serviceName).time {
             try {
