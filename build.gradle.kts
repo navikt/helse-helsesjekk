@@ -34,6 +34,8 @@ dependencies {
     compile("io.prometheus:simpleclient_common:$prometheusVersion")
     compile("io.prometheus:simpleclient_hotspot:$prometheusVersion")
 
+    compile("no.nav.helse:cxf-prometheus-metrics:dd7d125")
+    
     compile("org.apache.cxf:cxf-rt-ws-security:$cxfVersion")
     compile("org.apache.cxf:cxf-rt-ws-policy:$cxfVersion")
     compile("org.apache.cxf:cxf-rt-frontend-jaxws:$cxfVersion")

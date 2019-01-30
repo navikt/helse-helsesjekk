@@ -1,5 +1,6 @@
 package no.nav.helse.ws
 
+import no.nav.cxf.metrics.MetricFeature
 import no.nav.tjeneste.virksomhet.arbeidsfordeling.v1.binding.ArbeidsfordelingV1
 import no.nav.tjeneste.virksomhet.arbeidsforhold.v3.binding.ArbeidsforholdV3
 import no.nav.tjeneste.virksomhet.infotrygdberegningsgrunnlag.v1.binding.InfotrygdBeregningsgrunnlagV1
@@ -114,7 +115,7 @@ object Clients {
             serviceName = QName(namespace, svcName)
             endpointName = QName(namespace, portName)
             serviceClass = serviceClazz
-            features = listOf(WSAddressingFeature(), LoggingFeature())
+            features = listOf(WSAddressingFeature(), LoggingFeature(), MetricFeature())
         }
 
         return factory.create(serviceClazz)

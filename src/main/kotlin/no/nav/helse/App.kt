@@ -4,8 +4,6 @@ import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.prometheus.client.CollectorRegistry
-import io.prometheus.client.Counter
-import io.prometheus.client.Histogram
 import io.prometheus.client.hotspot.DefaultExports
 import no.nav.helse.nais.nais
 import no.nav.helse.ws.Clients
@@ -73,30 +71,11 @@ fun main() {
 
 data class Webservice<T>(val serviceName: String, val port: T, private val pingFunc: T.() -> Unit) {
 
-    companion object {
-        private val wsTimer: Histogram = Histogram.build()
-                .name("webservice_ping_seconds")
-                .labelNames("name")
-                .help("latency for ping requests").register()
-
-        private val wsErrorCounter: Counter = Counter.build()
-                .name("webservice_ping_error_counter")
-                .labelNames("name")
-                .help("error counter for failed ping requests").register()
-    }
-
-    init {
-        wsErrorCounter.labels(serviceName).inc(0.0)
-    }
-
     fun ping() {
-        wsTimer.labels(serviceName).time {
-            try {
-                port.pingFunc()
-            } catch (err: Exception) {
-                wsErrorCounter.labels(serviceName).inc()
-                log.error("Failed to ping ${serviceName}", err)
-            }
+        try {
+            port.pingFunc()
+        } catch (err: Exception) {
+            log.error("Failed to ping $serviceName", err)
         }
     }
 }
